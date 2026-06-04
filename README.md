@@ -1,0 +1,58 @@
+# LLM PR Labeler
+
+GitHub App that analyzes Pull Requests and suggests intent labels using a Large Language Model.
+
+Built as part of PFE013 (Projet de fin d'études) at ÉTS Montréal.
+
+## Stack
+
+- TypeScript + Node.js 20+
+- Probot (GitHub App framework)
+- Octokit (GitHub REST client, via Probot)
+- Vitest (testing)
+
+## État actuel
+
+**Itération 1** : plomberie GitHub fonctionnelle. L'app reçoit les événements PR, lit les données, et poste un commentaire (sans LLM).
+
+L'intégration LLM est prévue pour l'itération 2.
+
+## Installation locale
+
+Prérequis : Node 20+, npm 10+
+
+```bash
+npm install
+```
+
+Lance le wizard interactif pour créer la GitHub App de développement :
+
+```bash
+npm start
+```
+
+Au premier lancement, Probot ouvre une page web qui te guide pour créer la GitHub App, générer la clé privée et configurer Smee.io. Le `.env` est généré automatiquement.
+
+## Commandes utiles
+
+| Commande | Action |
+|---|---|
+| `npm run dev` | Démarre en mode watch (TypeScript) |
+| `npm start` | Démarre la version compilée |
+| `npm run build` | Compile TypeScript vers `lib/` |
+| `npm test` | Lance les tests Vitest |
+| `npm run test:coverage` | Tests avec rapport de couverture |
+| `npm run lint` | Vérifie le code avec ESLint |
+| `npm run format` | Formate le code avec Prettier |
+
+## Itérations prévues
+
+- ✅ Itération 1 : Plomberie GitHub (en cours)
+- ⏳ Itération 2 : Intégration LLM (Gemini)
+- ⏳ Itération 3 : Évaluation rigoureuse (100+ PRs)
+- ⏳ Itération 4 : `/intent apply`, multi-modèles
+- ⏳ Itération 5 : Finalisation, rapport
+
+## Licence
+
+MIT
