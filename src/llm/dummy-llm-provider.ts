@@ -26,7 +26,9 @@ export class DummyLlmProvider implements LlmProvider {
       });
     }
 
-    if (files.some((file) => file.includes("readme") || file.includes("docs/"))) {
+    if (
+      files.some((file) => file.includes("readme") || file.includes("docs/"))
+    ) {
       suggestions.push({
         name: "documentation",
         confidence: 0.8,

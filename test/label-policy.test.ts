@@ -32,12 +32,16 @@ describe("filterValidSuggestions", () => {
       { name: "bug", confidence: 0.85, reason: "" },
       { name: "feature", confidence: 0.95, reason: "" },
       { name: "tests", confidence: 0.75, reason: "" },
-      { name: "documentation", confidence: 0.90, reason: "" },
+      { name: "documentation", confidence: 0.9, reason: "" },
     ];
 
     const result = filterValidSuggestions(suggestions, repoLabels, 0.7, 3);
     expect(result).toHaveLength(3);
-    expect(result.map((s) => s.name)).toEqual(["feature", "documentation", "bug"]);
+    expect(result.map((s) => s.name)).toEqual([
+      "feature",
+      "documentation",
+      "bug",
+    ]);
   });
 
   it("déduplique les labels", () => {

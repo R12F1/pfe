@@ -43,8 +43,5 @@ export async function upsertPullRequestComment(
     body,
   });
 
-  context.log.info(
-    { owner, repo, issueNumber },
-    "Created new bot comment",
-  );
+  context.log.info({ owner, repo, issueNumber }, "Created new bot comment");
 }
