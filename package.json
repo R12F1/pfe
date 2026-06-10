@@ -1,0 +1,35 @@
+{
+  "name": "llm-pr-labeler",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "GitHub App that suggests PR labels via LLM (PFE013 ÉTS)",
+  "scripts": {
+    "build": "tsc",
+    "start": "probot run ./lib/index.js",
+    "dev": "tsx watch ./src/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src test --ext .ts",
+    "format": "prettier --write \"{src,test}/**/*.ts\""
+  },
+  "dependencies": {
+    "probot": "^13.4.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "@types/node": "^25.9.1",
+    "@vitest/coverage-v8": "^2.1.8",
+    "eslint": "^9.18.0",
+    "prettier": "^3.4.2",
+    "smee-client": "^5.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.60.1",
+    "vitest": "^2.1.8"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
