@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc",
     "start": "probot run ./lib/index.js",
-    "dev": "tsx watch ./src/index.ts",
+    "dev": "tsx watch ./src/server.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
