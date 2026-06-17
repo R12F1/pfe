@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "groq-sdk": "^1.2.1",
-    "probot": "^13.4.5"
+    "probot": "^14.3.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
