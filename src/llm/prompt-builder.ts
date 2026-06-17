@@ -1,56 +1,104 @@
-import type { PullRequestData } from "../domain/pull-request-data.js";
-import { MAX_FILES_IN_COMMENT } from "../utils/constants.js";
+import type { PullRequestLlmContext } from "../domain/pull-request-data.js";
 
-export function buildClassificationPrompt(prData: PullRequestData): string {
-  const visibleFiles = prData.files.slice(0, MAX_FILES_IN_COMMENT);
-
-  const filesSection =
-    visibleFiles.length > 0
-      ? visibleFiles
-          .map(
-            (f) =>
-              `- ${f.filename} (${f.status}, +${f.additions}/-${f.deletions})`,
-          )
-          .join("\n")
-      : "Aucun fichier détecté.";
+export function buildClassificationPrompt(
+  context: PullRequestLlmContext,
+): string {
+  const { pullRequest, totals, repository } = context;
+  const project = `${repository.owner}/${repository.repo}`;
 
   const labelsSection =
-    prData.repositoryLabels.length > 0
-      ? prData.repositoryLabels.join(", ")
-      : "Aucun label disponible.";
+    context.repositoryLabels.length > 0
+      ? context.repositoryLabels.join(", ")
+      : "No labels available.";
 
-  return `Tu es un assistant spécialisé dans l'analyse de Pull Requests GitHub.
-Ta tâche est de suggérer des labels pertinents pour la PR suivante.
+  const allFilesSection =
+    context.allFilesSummary.length > 0
+      ? context.allFilesSummary
+          .map(
+            (f) =>
+              `- ${f.filename} (${f.status}, ${f.changes} changes, score ${f.score}${f.ignored ? ", ignored" : ""})`,
+          )
+          .join("\n")
+      : "_No files detected._";
 
-## Données de la Pull Request
+  const selectedDiffsSection =
+    context.selectedFiles.length > 0
+      ? context.selectedFiles
+          .map((ranked) => {
+            const f = ranked.file;
+            const patch = f.patch
+              ? `\`\`\`diff\n${f.patch}\n\`\`\``
+              : "_diff not available_";
+            return `### ${f.filename} (${f.status}, +${f.additions}/-${f.deletions}, score ${ranked.score})\n${patch}`;
+          })
+          .join("\n\n")
+      : "_No representative files selected._";
 
-- Titre : ${prData.title}
-- Auteur : ${prData.author}
-- Branche source : ${prData.headBranch}
-- Branche cible : ${prData.baseBranch}
-- Description : ${prData.body || "(aucune description)"}
-- Changements : +${prData.additions} / -${prData.deletions}
+  return `You are a senior code reviewer and expert developer specializing in ${project}. You have deep knowledge of this codebase and understand its architecture, conventions, and typical change patterns.
 
-## Fichiers modifiés
+Your task: Analyze this GitHub Pull Request and assign the most appropriate labels from the repository's label set.
 
-${filesSection}
+## Pull Request to Analyze
 
-## Labels disponibles dans le repo
+**Repository:** ${project}
+**PR #${pullRequest.number}:** ${pullRequest.title}
+**Author:** ${pullRequest.author}
+**Branch:** ${pullRequest.headBranch} → ${pullRequest.baseBranch}
+**Description:** ${pullRequest.body || "(no description provided)"}
 
+**Statistics:** ${totals.changedFilesCount} files changed (+${totals.additions}/-${totals.deletions}), ${context.selectedFilesCount} analyzed, ${context.ignoredFilesCount} ignored
+
+## Files Changed
+
+${allFilesSection}
+
+## Code Diffs (most relevant files)
+
+${selectedDiffsSection}
+
+## Available Labels
+
+You MUST only use labels from this list (use exact spelling):
 ${labelsSection}
 
-## Instructions
+## Analysis Instructions
 
-Analyse la PR et suggère entre 1 et 3 labels parmi ceux disponibles.
-Pour chaque label suggéré, donne un score de confiance entre 0 et 1, et une courte raison.
+Think step by step:
+1. **Identify the primary intent**: What is this PR trying to accomplish? (fix a bug, add a feature, refactor, update docs, etc.)
+2. **Examine the code changes**: Do the diffs confirm or contradict the title/description?
+3. **Match to labels**: Which available labels best describe this change? Focus on the PRIMARY purpose.
 
-Réponds UNIQUEMENT avec un objet JSON valide dans ce format exact :
+Classification guidance:
+- Bug fix: Code corrects incorrect behavior, handles edge cases, fixes crashes/errors
+- Feature: Code adds NEW functionality or significantly extends existing capabilities  
+- Refactor: Code restructures without changing external behavior (rename, extract, simplify)
+- Test: Changes primarily add or modify test files
+- Documentation: Changes primarily affect docs, README, comments
+- CI/CD: Changes to workflows, build scripts, deployment configs
+
+## Confidence Calibration
+
+- **0.9-1.0**: Very confident — title, description, and code all clearly indicate this label
+- **0.7-0.89**: Confident — strong evidence from code, minor ambiguity
+- **0.5-0.69**: Moderate — reasonable inference, but context is limited
+- **Below 0.5**: Do not suggest — insufficient evidence
+
+## Output Format
+
+Respond with ONLY this JSON (no markdown, no explanation outside JSON):
 {
   "suggestions": [
-    { "name": "nom-du-label", "confidence": 0.9, "reason": "explication courte" }
-  ]
+    {"name": "bug", "confidence": 0.92, "reason": "Fixes null pointer exception in auth flow"}
+  ],
+  "summary": "One sentence describing what this PR does."
 }
 
-Ne suggère que des labels qui existent dans la liste des labels disponibles.
-Si aucun label ne correspond, retourne { "suggestions": [] }.`;
+## Critical Rules
+
+- Use EXACT label names from the available list (case-sensitive, include prefixes like "Type:" if present)
+- Maximum 3 labels, sorted by confidence descending
+- Focus on PRIMARY intent — do not over-label
+- If no label fits with confidence ≥ 0.5, return empty suggestions array
+- Keep reasons under 15 words
+- Summary must be one clear sentence`;
 }

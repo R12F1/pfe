@@ -3,8 +3,9 @@ import { readPullRequestData } from "../github/pr-reader.js";
 import { buildAnalysisComment } from "../comments/build-analysis-comment.js";
 import { upsertPullRequestComment } from "../github/pr-commenter.js";
 import { GroqProvider } from "../llm/groq-provider.js";
+import { buildPullRequestLlmContext } from "../llm/pr-context.js";
 import { filterValidSuggestions } from "../labels/label-policy.js";
-import type { LabelSuggestion } from "../domain/label-suggestion.js";
+import type { PullRequestAnalysis } from "../domain/llm-analysis.js";
 
 function createGroqProvider(): GroqProvider | null {
   const apiKey = process.env.GROQ_API_KEY;
@@ -30,28 +31,54 @@ export async function handlePullRequestEvent(
   try {
     const prData = await readPullRequestData(context);
 
-    let suggestions: LabelSuggestion[] = [];
+    // Préparation intelligente : on score/filtre les fichiers avant l'appel LLM.
+    const llmContext = buildPullRequestLlmContext(prData);
+    context.log.info(
+      {
+        ...logContext,
+        selectedFiles: llmContext.selectedFilesCount,
+        ignoredFiles: llmContext.ignoredFilesCount,
+      },
+      "Filtered LLM context built",
+    );
+
+    let analysis: PullRequestAnalysis | null = null;
     const groq = createGroqProvider();
 
     if (groq) {
       try {
-        const raw = await groq.classifyPullRequest(prData);
-        suggestions = filterValidSuggestions(raw, prData.repositoryLabels);
+        const raw = await groq.classifyPullRequest(llmContext);
+        analysis = {
+          ...raw,
+          suggestions: filterValidSuggestions(
+            raw.suggestions,
+            prData.repositoryLabels,
+          ),
+        };
         context.log.info(
-          { ...logContext, suggestions: suggestions.map((s) => s.name) },
+          {
+            ...logContext,
+            suggestions: analysis.suggestions.map((s) => s.name),
+          },
           "LLM label suggestions generated",
         );
       } catch (llmError) {
         context.log.warn(
-          { ...logContext, error: llmError instanceof Error ? llmError.message : llmError },
+          {
+            ...logContext,
+            error: llmError instanceof Error ? llmError.message : llmError,
+          },
           "LLM call failed, posting comment without suggestions",
         );
       }
     } else {
-      context.log.warn(logContext, "GROQ_API_KEY not configured, skipping LLM classification");
+      context.log.warn(
+        logContext,
+        "GROQ_API_KEY not configured, skipping LLM classification",
+      );
     }
 
-    const commentBody = buildAnalysisComment(prData, suggestions);
+    const commentBody = buildAnalysisComment(prData, llmContext, analysis);
     await upsertPullRequestComment(context, prData.number, commentBody);
 
     context.log.info(logContext, "Pull request analysis comment published");
