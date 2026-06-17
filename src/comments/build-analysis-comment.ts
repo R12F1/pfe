@@ -1,10 +1,14 @@
 import type { PullRequestData } from "../domain/pull-request-data.js";
+import type { LabelSuggestion } from "../domain/label-suggestion.js";
 import {
   BOT_COMMENT_MARKER,
   MAX_FILES_IN_COMMENT,
 } from "../utils/constants.js";
 
-export function buildAnalysisComment(prData: PullRequestData): string {
+export function buildAnalysisComment(
+  prData: PullRequestData,
+  suggestions: LabelSuggestion[] = [],
+): string {
   const visibleFiles = prData.files.slice(0, MAX_FILES_IN_COMMENT);
 
   const filesList =
@@ -23,10 +27,31 @@ export function buildAnalysisComment(prData: PullRequestData): string {
       ? `\n\n_... et ${hiddenFilesCount} autre(s) fichier(s)._`
       : "";
 
-  const labelsText =
-    prData.repositoryLabels.length > 0
-      ? prData.repositoryLabels.map((label) => `\`${label}\``).join(", ")
-      : "_Aucun label trouvé dans le repo._";
+  const suggestionsSection =
+    suggestions.length > 0
+      ? suggestions
+          .map(
+            (s) =>
+              `| \`${s.name}\` | ${Math.round(s.confidence * 100)}% | ${s.reason} |`,
+          )
+          .join("\n")
+      : null;
+
+  const labelsSection = suggestionsSection
+    ? `### 🏷️ Labels suggérés par le LLM
+
+| Label | Confiance | Raison |
+|---|---|---|
+${suggestionsSection}`
+    : `### Labels disponibles dans le repo
+
+${
+  prData.repositoryLabels.length > 0
+    ? prData.repositoryLabels.map((label) => `\`${label}\``).join(", ")
+    : "_Aucun label trouvé dans le repo._"
+}
+
+> ⚠️ Aucune suggestion LLM disponible pour cette PR.`;
 
   return `${BOT_COMMENT_MARKER}
 ## 🤖 LLM PR Labeler — Analyse préliminaire
@@ -47,11 +72,7 @@ L'application a bien reçu et analysé cette Pull Request.
 
 ${filesList}${hiddenFilesText}
 
-### Labels disponibles dans le repo
-
-${labelsText}
-
-> Aucun LLM n'est appelé pour l'instant. Cette étape valide seulement l'intégration GitHub.
+${labelsSection}
 `;
 }
 
