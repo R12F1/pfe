@@ -10,3 +10,15 @@ export const MAX_PATCH_LINES_PER_FILE = 40;
 
 // Taille maximale du résumé de tous les fichiers inclus dans le contexte.
 export const MAX_ALL_FILES_SUMMARY = 100;
+
+// --- Politique d'application des labels -----------------------------------
+
+// Nombre maximum de labels retenus/appliqués sur une PR.
+// Modifiable : changer cette valeur ajuste à la fois la suggestion et l'auto-apply.
+export const MAX_LABELS_TO_APPLY = 3;
+
+// Confiance minimale pour qu'un label soit proposé dans le commentaire.
+export const MIN_CONFIDENCE_TO_SUGGEST = 0.7;
+
+// Confiance minimale pour qu'un label soit appliqué automatiquement (mode auto-high).
+export const AUTO_APPLY_CONFIDENCE_THRESHOLD = 0.85;

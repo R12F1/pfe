@@ -1,0 +1,44 @@
+---
+description: "Pipeline LLM, politique de labels et commentaire bot."
+globs:
+  - "src/domain/**/*.ts"
+  - "src/labels/**/*.ts"
+  - "src/llm/**/*.ts"
+  - "src/handlers/**/*.ts"
+  - "src/comments/**/*.ts"
+  - "src/utils/constants.ts"
+  - "docs/labels-taxonomy-v1.md"
+alwaysApply: false
+---
+
+# Domaine PR / labels / LLM
+
+## Pipeline (ordre strict)
+
+```
+readPullRequestData → buildPullRequestLlmContext → GroqProvider.classifyPullRequest
+→ filterValidSuggestions → buildAnalysisComment → upsertPullRequestComment
+```
+
+1. `rankFilesByImportance` — ignorer lockfiles, binaires, `dist/`, assets
+2. Top `MAX_FILES_FOR_LLM` (6) fichiers, patchs tronqués à `MAX_PATCH_LINES_PER_FILE` (40)
+3. Prompt : labels **uniquement** ceux de `repositoryLabels` (orthographe exacte)
+4. Groq : JSON `{ suggestions, summary }`, `temperature: 0.1`
+5. `filterValidSuggestions` : confidence ≥ **0.7**, max **3**, label doit exister dans le repo
+
+## Commentaire bot
+
+- Marker obligatoire : `BOT_COMMENT_MARKER` = `<!-- llm-pr-labeler -->` (upsert dans `pr-commenter.ts`)
+- Tableaux Markdown : échapper `|` et `\n` (`escapeMarkdownTableValue`)
+- Sans `GROQ_API_KEY` ou échec LLM → commentaire sans suggestions (comportement attendu)
+- Labels **suggérés** seulement — pas d'application GitHub automatique (prévu itération 4)
+
+## Constantes (`src/utils/constants.ts`)
+
+Erreur Groq 413/429 → **réduire** `MAX_FILES_FOR_LLM` / `MAX_PATCH_LINES_PER_FILE`, pas agrandir le prompt.
+
+## Pièges connus
+
+- Prompt dit seuil 0.5, policy filtre à 0.7 — aligner les deux si l'un change
+- `JSON.parse` réponse Groq non protégé — ajouter try/catch si on touche `groq-provider.ts`
+- Taxonomie de référence : `docs/labels-taxonomy-v1.md` (ne pas réécrire sans demande)

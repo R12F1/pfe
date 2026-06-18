@@ -13,9 +13,19 @@ Built as part of PFE013 (Projet de fin d'études) at ÉTS Montréal.
 
 ## État actuel
 
-**Itération 1** : plomberie GitHub fonctionnelle. L'app reçoit les événements PR, lit les données, et poste un commentaire (sans LLM).
+**Itération 2** : intégration LLM via Groq. L'app reçoit les événements PR, filtre/score les fichiers pertinents, envoie un contexte compact au LLM, puis poste un commentaire avec les labels suggérés (nom, confiance, justification).
 
-L'intégration LLM est prévue pour l'itération 2.
+### Modes d'application des labels
+
+Configurable via la variable d'environnement `LABEL_MODE` :
+
+| `LABEL_MODE` | Comportement |
+|---|---|
+| `suggest` (défaut) | Publie seulement un commentaire — aucun label appliqué |
+| `auto-high` | Applique automatiquement les labels au-dessus du seuil de confiance |
+| `auto-all` | Applique tous les labels retenus (plafonnés au max par confiance) |
+
+Les seuils et le nombre maximum de labels sont centralisés dans `src/utils/constants.ts`.
 
 ## Installation locale
 
@@ -47,8 +57,8 @@ Au premier lancement, Probot ouvre une page web qui te guide pour créer la GitH
 
 ## Itérations prévues
 
-- ✅ Itération 1 : Plomberie GitHub (en cours)
-- ⏳ Itération 2 : Intégration LLM (Gemini)
+- ✅ Itération 1 : Plomberie GitHub
+- ✅ Itération 2 : Intégration LLM (Groq) + modes d'application des labels
 - ⏳ Itération 3 : Évaluation rigoureuse (100+ PRs)
 - ⏳ Itération 4 : `/intent apply`, multi-modèles
 - ⏳ Itération 5 : Finalisation, rapport

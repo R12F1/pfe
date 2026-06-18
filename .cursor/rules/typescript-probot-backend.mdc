@@ -1,0 +1,46 @@
+---
+description: "Règles TypeScript/Probot pour le code source."
+globs:
+  - "src/**/*.ts"
+alwaysApply: false
+---
+
+# TypeScript / Probot (`src/`)
+
+## Responsabilités par dossier
+
+- `handlers/` — orchestration seule (`handlePullRequestEvent`)
+- `github/` — **seul** endroit pour `context.octokit` (`readPullRequestData`, `upsertPullRequestComment`)
+- `domain/` — types internes découplés du payload GitHub
+- `llm/` — contexte, prompt, provider Groq, scoring (pas d'Octokit)
+- `labels/` — `filterValidSuggestions`
+- `comments/` — Markdown pur (`buildAnalysisComment`)
+- `utils/constants.ts` — limites LLM + `BOT_COMMENT_MARKER`
+
+## TypeScript (NodeNext / strict)
+
+- Imports relatifs avec suffixe `.js`
+- `import type` pour les types ; exports nommés (sauf `export default` dans `index.ts`)
+- Gérer nullish : `pr.body ?? ""`, `pr.user?.login ?? "unknown"`
+
+## Probot
+
+- Contexte typé : `Context<"pull_request">`
+- Logs structurés : `context.log` + `{ owner, repo, pullNumber }`
+- `handlePullRequestEvent` : `try/catch` global → log, **ne pas re-throw** (évite retries GitHub)
+
+## Réutiliser (ne pas réinventer)
+
+```ts
+readPullRequestData(context)           // → PullRequestData
+buildPullRequestLlmContext(prData)     // → PullRequestLlmContext
+upsertPullRequestComment(ctx, n, body) // upsert via marker HTML
+```
+
+Provider Groq : instancier seulement si `GROQ_API_KEY` est définie (pattern actuel du handler).
+
+## Interdit
+
+- `any` implicite ; fetch GitHub hors Octokit (sauf `scripts/`)
+- Logique Octokit hors `src/github/`
+- Changer `BOT_COMMENT_MARKER` sans mettre à jour `pr-commenter.ts` + tests

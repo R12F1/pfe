@@ -2,9 +2,10 @@ import Groq from "groq-sdk";
 import type { PullRequestLlmContext } from "../domain/pull-request-data.js";
 import type { LabelSuggestion } from "../domain/label-suggestion.js";
 import type { PullRequestAnalysis } from "../domain/llm-analysis.js";
+import type { LlmProvider } from "./llm-provider.js";
 import { buildClassificationPrompt } from "./prompt-builder.js";
 
-export class GroqProvider {
+export class GroqProvider implements LlmProvider {
   private client: Groq;
   private model: string;
 
@@ -39,14 +40,40 @@ export class GroqProvider {
     }
 
     const content = response.choices[0]?.message?.content ?? "{}";
-    const parsed = JSON.parse(content) as {
-      suggestions?: LabelSuggestion[];
-      summary?: string;
-    };
+
+    let parsed: { suggestions?: unknown; summary?: unknown };
+    try {
+      parsed = JSON.parse(content);
+    } catch {
+      return { suggestions: [], summary: "" };
+    }
 
     return {
-      suggestions: parsed.suggestions ?? [],
-      summary: parsed.summary ?? "",
+      suggestions: normalizeSuggestions(parsed.suggestions),
+      summary: typeof parsed.summary === "string" ? parsed.summary : "",
     };
   }
+}
+
+function clamp01(value: number): number {
+  if (Number.isNaN(value)) return 0;
+  return Math.min(1, Math.max(0, value));
+}
+
+// Valide et normalise les suggestions brutes du LLM : ignore les entrées
+// sans nom et borne la confiance dans [0, 1].
+function normalizeSuggestions(raw: unknown): LabelSuggestion[] {
+  if (!Array.isArray(raw)) return [];
+
+  return raw
+    .map((entry): LabelSuggestion => {
+      const s = (entry ?? {}) as Record<string, unknown>;
+      return {
+        name: typeof s.name === "string" ? s.name.trim() : "",
+        confidence:
+          typeof s.confidence === "number" ? clamp01(s.confidence) : 0,
+        reason: typeof s.reason === "string" ? s.reason : "",
+      };
+    })
+    .filter((s) => s.name.length > 0);
 }

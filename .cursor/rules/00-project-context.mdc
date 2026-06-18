@@ -1,0 +1,27 @@
+---
+description: "Contexte minimal global du projet et garde-fous critiques."
+alwaysApply: true
+---
+
+# LLM PR Labeler (PFE013 ÉTS)
+
+GitHub App TypeScript/Probot qui suggère des labels de PR via Groq. Monolithe modulaire, sans base de données.
+
+**Stack** : Node 20+, ESM, Probot/Octokit, Groq (`groq-sdk`), Vitest. Entrées : `src/index.ts`, `src/server.ts` (dev).
+
+## Garde-fous (toujours)
+
+- Ne jamais committer `.env`, `*.pem`, clés API.
+- Ne pas modifier config, CI, README, docs, tests existants **sans demande explicite**.
+- Repo 100 % TypeScript/Node — pas de Java, Spring, Maven, Cucumber, Python.
+- Tests dans `test/*.test.ts`, jamais dans `src/`.
+- PowerShell : utiliser `;` plutôt que `&&`.
+
+## Où chercher le détail
+
+| Sujet | Rule |
+|---|---|
+| Code `src/` | `typescript-probot-backend` |
+| Tests Vitest | `testing` |
+| Build / CI / commandes | `build-and-commands` |
+| Pipeline LLM, labels, commentaire bot | `domain-specific` |

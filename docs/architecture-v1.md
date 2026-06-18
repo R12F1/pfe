@@ -22,9 +22,19 @@ GitHub Comment (avec marker pour upsert)
 Commande /intent apply → application des labels GitHub natifs
 ```
 
-## État au moment de cette version (Itération 1)
+## État au moment de cette version (Itération 2)
 
-L'application reçoit les événements GitHub et publie un commentaire enrichi de métadonnées sur la PR, **sans appeler de LLM**. Cette itération valide la plomberie GitHub avant de brancher l'IA.
+L'application reçoit les événements GitHub, **filtre et score les fichiers** de la PR, envoie un contexte compact à un LLM (**Groq**), puis publie un commentaire avec les labels suggérés (nom, confiance, justification). Selon `LABEL_MODE`, elle peut aussi **appliquer** les labels automatiquement.
+
+### Modes d'application des labels (`LABEL_MODE`)
+
+| Mode | Comportement |
+|---|---|
+| `suggest` (défaut) | Commentaire seulement, aucun label appliqué |
+| `auto-high` | Applique les labels ≥ `AUTO_APPLY_CONFIDENCE_THRESHOLD` |
+| `auto-all` | Applique tous les labels retenus, plafonnés à `MAX_LABELS_TO_APPLY` (triés par confiance) |
+
+Constantes pilotables dans `src/utils/constants.ts`.
 
 ## Modules
 
@@ -35,8 +45,8 @@ L'application reçoit les événements GitHub et publie un commentaire enrichi d
 | `src/github/` | Lecture PR + upsert commentaire via Octokit | ✅ |
 | `src/comments/` | Construction du commentaire Markdown | ✅ |
 | `src/domain/` | Types internes découplés du payload GitHub brut | ✅ |
-| `src/labels/` | Politique de filtrage des suggestions | ✅ (préparé pour iter 2) |
-| `src/llm/` | Interface LLM + provider dummy | ✅ (interface uniquement) |
+| `src/labels/` | Filtrage des suggestions, modes et application des labels | ✅ |
+| `src/llm/` | Interface `LlmProvider`, provider Groq, scoring fichiers, prompt | ✅ |
 
 ## Décisions techniques clés
 

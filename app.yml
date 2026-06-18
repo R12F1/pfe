@@ -14,6 +14,8 @@
 # Uncomment the event names below to enable them.
 default_events:
   - pull_request
+  - check_run
+  - issue_comment
 
 # The set of permissions needed by the GitHub App. The format of the object uses
 # the permission name for the key (for example, issues) and the access type for
@@ -26,7 +28,7 @@ default_permissions:
 
   # Checks on code.
   # https://developer.github.com/v3/apps/permissions/#permission-on-checks
-  # checks: read
+  checks: write
 
   # Repository contents, commits, branches, downloads, releases, and merges.
   # https://developer.github.com/v3/apps/permissions/#permission-on-contents
