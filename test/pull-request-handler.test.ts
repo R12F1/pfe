@@ -42,6 +42,7 @@ function createMockContext(throwOnReader = false) {
         listLabelsForRepo: vi
           .fn()
           .mockResolvedValue({ data: [{ name: "bug" }] }),
+        listLabelsOnIssue: vi.fn().mockResolvedValue({ data: [] }),
         listComments: vi.fn().mockResolvedValue({ data: [] }),
         createComment: vi.fn().mockResolvedValue({}),
         updateComment: vi.fn().mockResolvedValue({}),

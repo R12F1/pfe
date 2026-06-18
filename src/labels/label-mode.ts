@@ -48,3 +48,20 @@ export function selectLabelsToApply(
       return suggestions.slice(0, maxLabels);
   }
 }
+
+// Labels suggérés déjà présents sur la PR mais sous le seuil auto-high :
+// à retirer quand l'utilisateur bascule vers « Auto-apply high ».
+export function selectSuggestedLabelsBelowThreshold(
+  suggestions: LabelSuggestion[],
+  currentPrLabels: string[],
+  threshold: number = AUTO_APPLY_CONFIDENCE_THRESHOLD,
+): string[] {
+  const confidenceByName = new Map(
+    suggestions.map((s) => [s.name.toLowerCase(), s.confidence]),
+  );
+
+  return currentPrLabels.filter((label) => {
+    const confidence = confidenceByName.get(label.toLowerCase());
+    return confidence !== undefined && confidence < threshold;
+  });
+}

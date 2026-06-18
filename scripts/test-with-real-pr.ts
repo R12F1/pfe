@@ -84,7 +84,7 @@ async function fetchPrData(
 ): Promise<PullRequestData> {
   console.log(`\nRécupération de la PR #${pullNumber} sur ${owner}/${repo}...`);
 
-  const [pr, filesRaw, labelsRaw] = await Promise.all([
+  const [pr, filesRaw, labelsRaw, prLabelsRaw] = await Promise.all([
     ghFetch<{
       number: number;
       title: string;
@@ -112,6 +112,9 @@ async function fetchPrData(
     ghFetch<{ name: string }[]>(
       `/repos/${owner}/${repo}/labels?per_page=100`,
     ),
+    ghFetch<{ name: string }[]>(
+      `/repos/${owner}/${repo}/issues/${pullNumber}/labels?per_page=100`,
+    ),
   ]);
 
   const files: PullRequestFileData[] = filesRaw.map((f) => ({
@@ -138,6 +141,7 @@ async function fetchPrData(
     changedFilesCount: pr.changed_files,
     files,
     repositoryLabels: labelsRaw.map((l) => l.name),
+    pullRequestLabels: prLabelsRaw.map((l) => l.name),
   };
 }
 

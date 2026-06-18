@@ -19,6 +19,7 @@ function baseData(files: PullRequestFileData[]): PullRequestData {
     changedFilesCount: files.length,
     files,
     repositoryLabels: ["bug", "tests"],
+    pullRequestLabels: [],
   };
 }
 

@@ -19,11 +19,19 @@ export async function readPullRequestData(
     per_page: 100,
   });
 
-  const labelsResponse = await context.octokit.issues.listLabelsForRepo({
-    owner,
-    repo,
-    per_page: 100,
-  });
+  const [labelsResponse, prLabelsResponse] = await Promise.all([
+    context.octokit.issues.listLabelsForRepo({
+      owner,
+      repo,
+      per_page: 100,
+    }),
+    context.octokit.issues.listLabelsOnIssue({
+      owner,
+      repo,
+      issue_number: pullNumber,
+      per_page: 100,
+    }),
+  ]);
 
   const files: PullRequestFileData[] = filesResponse.data.map((file) => ({
     filename: file.filename,
@@ -33,8 +41,6 @@ export async function readPullRequestData(
     changes: file.changes,
     patch: file.patch,
   }));
-
-  const repositoryLabels = labelsResponse.data.map((label) => label.name);
 
   return {
     owner,
@@ -50,6 +56,7 @@ export async function readPullRequestData(
     deletions: pr.deletions ?? 0,
     changedFilesCount: pr.changed_files ?? files.length,
     files,
-    repositoryLabels,
+    repositoryLabels: labelsResponse.data.map((label) => label.name),
+    pullRequestLabels: prLabelsResponse.data.map((label) => label.name),
   };
 }

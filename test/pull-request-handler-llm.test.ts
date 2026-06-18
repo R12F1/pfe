@@ -38,10 +38,15 @@ function createMockContext() {
         listLabelsForRepo: vi
           .fn()
           .mockResolvedValue({ data: [{ name: "feature" }, { name: "bug" }] }),
+        listLabelsOnIssue: vi.fn().mockResolvedValue({ data: [] }),
         listComments: vi.fn().mockResolvedValue({ data: [] }),
         createComment: vi.fn().mockResolvedValue({}),
         updateComment: vi.fn().mockResolvedValue({}),
         addLabels: vi.fn().mockResolvedValue({}),
+        removeLabel: vi.fn().mockResolvedValue({}),
+      },
+      checks: {
+        create: vi.fn().mockResolvedValue({}),
       },
     },
     log: {
@@ -86,13 +91,19 @@ describe("handlePullRequestEvent — chemin LLM", () => {
     expect(ctx.octokit.issues.addLabels).not.toHaveBeenCalled();
   });
 
-  it("mode auto-high : applique seulement les labels au-dessus du seuil", async () => {
+  it("mode auto-high : applique les labels au-dessus du seuil et retire les autres suggérés", async () => {
     process.env.LABEL_MODE = "auto-high";
     const ctx = createMockContext();
+    ctx.octokit.issues.listLabelsOnIssue = vi
+      .fn()
+      .mockResolvedValue({ data: [{ name: "bug" }] });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await handlePullRequestEvent(ctx as any, mockProvider());
 
+    expect(ctx.octokit.issues.removeLabel).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "bug" }),
+    );
     expect(ctx.octokit.issues.addLabels).toHaveBeenCalledWith(
       expect.objectContaining({ labels: ["feature"] }),
     );

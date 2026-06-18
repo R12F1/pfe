@@ -35,6 +35,7 @@ const baseData: PullRequestData = {
     },
   ],
   repositoryLabels: ["bug", "feature", "tests"],
+  pullRequestLabels: [],
 };
 
 function contextFor(data: PullRequestData) {

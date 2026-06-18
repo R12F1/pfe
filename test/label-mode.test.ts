@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   resolveLabelMode,
   selectLabelsToApply,
+  selectSuggestedLabelsBelowThreshold,
 } from "../src/labels/label-mode.js";
 import type { LabelSuggestion } from "../src/domain/label-suggestion.js";
 
@@ -59,5 +60,23 @@ describe("selectLabelsToApply", () => {
   it("respecte un seuil personnalisé en auto-high", () => {
     const result = selectLabelsToApply(suggestions, "auto-high", 0.9);
     expect(result.map((s) => s.name)).toEqual(["bug"]);
+  });
+});
+
+describe("selectSuggestedLabelsBelowThreshold", () => {
+  it("retire les labels suggérés présents sur la PR sous le seuil", () => {
+    const result = selectSuggestedLabelsBelowThreshold(
+      suggestions,
+      ["bug", "tests", "wontfix"],
+    );
+    expect(result).toEqual(["tests"]);
+  });
+
+  it("ne retire pas les labels hors suggestions ni ceux au-dessus du seuil", () => {
+    const result = selectSuggestedLabelsBelowThreshold(
+      suggestions,
+      ["security", "wontfix"],
+    );
+    expect(result).toEqual([]);
   });
 });

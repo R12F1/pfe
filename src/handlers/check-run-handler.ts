@@ -4,8 +4,11 @@ import { findBotComment, upsertComment } from "../github/pr-commenter.js";
 import { buildPullRequestLlmContext } from "../llm/pr-context.js";
 import { buildAnalysisComment } from "../comments/build-analysis-comment.js";
 import { parseAnalysisDataBlock } from "../comments/comment-state.js";
-import { applyLabels } from "../labels/label-applier.js";
-import { selectLabelsToApply } from "../labels/label-mode.js";
+import { applyLabels, removeLabels } from "../labels/label-applier.js";
+import {
+  selectLabelsToApply,
+  selectSuggestedLabelsBelowThreshold,
+} from "../labels/label-mode.js";
 import {
   ACTION_APPLY_ALL,
   ACTION_APPLY_HIGH,
@@ -54,29 +57,58 @@ export async function handleCheckRunRequestedAction(
 
     let appliedLabels: string[] = [];
     let interactive = false;
+    let removedLabels: string[] = [];
 
     if (identifier === ACTION_SUGGEST) {
-      // Bascule en mode cases à cocher ; pré-coche les labels déjà présents.
+      // Bascule en mode cases à cocher ; pré-coche les labels déjà sur la PR.
       interactive = true;
       const present = new Set(
-        prData.repositoryLabels.map((l) => l.toLowerCase()),
+        prData.pullRequestLabels.map((l) => l.toLowerCase()),
       );
       appliedLabels = analysis.suggestions
         .map((s) => s.name)
         .filter((name) => present.has(name.toLowerCase()));
     } else if (identifier === ACTION_APPLY_HIGH) {
       const toApply = selectLabelsToApply(analysis.suggestions, "auto-high");
+      removedLabels = selectSuggestedLabelsBelowThreshold(
+        analysis.suggestions,
+        prData.pullRequestLabels,
+      );
       appliedLabels = toApply.map((s) => s.name);
+
+      if (removedLabels.length > 0) {
+        await removeLabels(
+          context.octokit,
+          owner,
+          repo,
+          pr.number,
+          removedLabels,
+        );
+      }
+      if (appliedLabels.length > 0) {
+        await applyLabels(
+          context.octokit,
+          owner,
+          repo,
+          pr.number,
+          appliedLabels,
+        );
+      }
     } else if (identifier === ACTION_APPLY_ALL) {
       const toApply = selectLabelsToApply(analysis.suggestions, "auto-all");
       appliedLabels = toApply.map((s) => s.name);
+      if (appliedLabels.length > 0) {
+        await applyLabels(
+          context.octokit,
+          owner,
+          repo,
+          pr.number,
+          appliedLabels,
+        );
+      }
     } else {
       context.log.warn(logContext, "Unknown check run action identifier");
       return;
-    }
-
-    if (appliedLabels.length > 0 && identifier !== ACTION_SUGGEST) {
-      await applyLabels(context.octokit, owner, repo, pr.number, appliedLabels);
     }
 
     const body = buildAnalysisComment(prData, llmContext, analysis, appliedLabels, {
@@ -85,7 +117,7 @@ export async function handleCheckRunRequestedAction(
     await upsertComment(context.octokit, owner, repo, pr.number, body);
 
     context.log.info(
-      { ...logContext, appliedLabels, interactive },
+      { ...logContext, appliedLabels, removedLabels, interactive },
       "Check run action handled",
     );
   } catch (error) {

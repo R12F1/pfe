@@ -48,6 +48,9 @@ function createMockContext(overrides: Record<string, unknown> = {}) {
         listLabelsForRepo: vi.fn().mockResolvedValue({
           data: [{ name: "bug" }, { name: "feature" }, { name: "tests" }],
         }),
+        listLabelsOnIssue: vi.fn().mockResolvedValue({
+          data: [{ name: "bug" }],
+        }),
       },
     },
   };
@@ -92,6 +95,15 @@ describe("readPullRequestData", () => {
     const result = await readPullRequestData(ctx as any);
 
     expect(result.repositoryLabels).toEqual(["bug", "feature", "tests"]);
+  });
+
+  it("extrait les labels actuellement présents sur la PR", async () => {
+    const ctx = createMockContext();
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = await readPullRequestData(ctx as any);
+
+    expect(result.pullRequestLabels).toEqual(["bug"]);
   });
 
   it("gère le cas où le body de la PR est null", async () => {

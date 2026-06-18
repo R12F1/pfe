@@ -22,6 +22,7 @@ export type PullRequestData = {
   changedFilesCount: number;
   files: PullRequestFileData[];
   repositoryLabels: string[];
+  pullRequestLabels: string[];
 };
 
 // Fichier auquel on a attribué un score d'importance pour la sélection LLM.

@@ -14,16 +14,23 @@ export async function fetchPullRequestData(
   repo: string,
   pullNumber: number,
 ): Promise<PullRequestData> {
-  const [prResponse, filesResponse, labelsResponse] = await Promise.all([
-    octokit.pulls.get({ owner, repo, pull_number: pullNumber }),
-    octokit.pulls.listFiles({
-      owner,
-      repo,
-      pull_number: pullNumber,
-      per_page: 100,
-    }),
-    octokit.issues.listLabelsForRepo({ owner, repo, per_page: 100 }),
-  ]);
+  const [prResponse, filesResponse, labelsResponse, prLabelsResponse] =
+    await Promise.all([
+      octokit.pulls.get({ owner, repo, pull_number: pullNumber }),
+      octokit.pulls.listFiles({
+        owner,
+        repo,
+        pull_number: pullNumber,
+        per_page: 100,
+      }),
+      octokit.issues.listLabelsForRepo({ owner, repo, per_page: 100 }),
+      octokit.issues.listLabelsOnIssue({
+        owner,
+        repo,
+        issue_number: pullNumber,
+        per_page: 100,
+      }),
+    ]);
 
   const pr = prResponse.data;
 
@@ -51,5 +58,6 @@ export async function fetchPullRequestData(
     changedFilesCount: pr.changed_files ?? files.length,
     files,
     repositoryLabels: labelsResponse.data.map((label) => label.name),
+    pullRequestLabels: prLabelsResponse.data.map((label) => label.name),
   };
 }

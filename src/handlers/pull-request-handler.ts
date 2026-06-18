@@ -6,8 +6,8 @@ import { GroqProvider } from "../llm/groq-provider.js";
 import type { LlmProvider } from "../llm/llm-provider.js";
 import { buildPullRequestLlmContext } from "../llm/pr-context.js";
 import { filterValidSuggestions } from "../labels/label-policy.js";
-import { resolveLabelMode, selectLabelsToApply } from "../labels/label-mode.js";
-import { applyLabelsToPullRequest } from "../labels/label-applier.js";
+import { resolveLabelMode, selectLabelsToApply, selectSuggestedLabelsBelowThreshold } from "../labels/label-mode.js";
+import { applyLabelsToPullRequest, removeLabels } from "../labels/label-applier.js";
 import { createLabelerCheckRun } from "../github/check-run.js";
 import { MAX_LABELS_TO_APPLY } from "../utils/constants.js";
 import type { PullRequestAnalysis } from "../domain/llm-analysis.js";
@@ -92,13 +92,32 @@ export async function handlePullRequestEvent(
 
     if (analysis && analysis.suggestions.length > 0) {
       const toApply = selectLabelsToApply(analysis.suggestions, mode);
-      if (toApply.length > 0) {
+      if (toApply.length > 0 || mode === "auto-high") {
         const labelNames = toApply.map((s) => s.name);
+        const toRemove =
+          mode === "auto-high"
+            ? selectSuggestedLabelsBelowThreshold(
+                analysis.suggestions,
+                prData.pullRequestLabels,
+              )
+            : [];
+
         try {
-          await applyLabelsToPullRequest(context, prData.number, labelNames);
+          if (toRemove.length > 0) {
+            await removeLabels(
+              context.octokit,
+              repository.owner.login,
+              repository.name,
+              prData.number,
+              toRemove,
+            );
+          }
+          if (labelNames.length > 0) {
+            await applyLabelsToPullRequest(context, prData.number, labelNames);
+          }
           appliedLabels = labelNames;
           context.log.info(
-            { ...logContext, mode, appliedLabels },
+            { ...logContext, mode, appliedLabels, removedLabels: toRemove },
             "Labels applied to pull request",
           );
         } catch (applyError) {

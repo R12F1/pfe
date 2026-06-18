@@ -35,6 +35,7 @@ const prData: PullRequestData = {
     },
   ],
   repositoryLabels: ["bug", "feature", "security"],
+  pullRequestLabels: [],
 };
 
 describe("buildClassificationPrompt", () => {
