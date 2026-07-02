@@ -1,8 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { handleCheckRunRequestedAction } from "../src/handlers/check-run-handler.js";
 import { renderAnalysisDataBlock } from "../src/comments/comment-state.js";
-import { BOT_COMMENT_MARKER, AI_LABEL_MARKER_NAME } from "../src/utils/constants.js";
-import { ACTION_APPLY_HIGH, ACTION_APPLY_ALL } from "../src/github/check-run.js";
+import { BOT_COMMENT_MARKER } from "../src/utils/constants.js";
+import { toAiLabelName } from "../src/labels/ai-label-name.js";
+import {
+  ACTION_SUGGEST,
+  ACTION_APPLY_HIGH,
+  ACTION_APPLY_ALL,
+} from "../src/github/check-run.js";
 
 const analysis = {
   suggestions: [
@@ -65,6 +70,7 @@ function createMockContext(identifier: string, currentLabels: string[] = []) {
         addLabels: vi.fn().mockResolvedValue({}),
         removeLabel: vi.fn().mockResolvedValue({}),
         createLabel: vi.fn().mockResolvedValue({}),
+        getLabel: vi.fn().mockResolvedValue({ data: { color: "d73a4a" } }),
       },
     },
     log: {
@@ -76,26 +82,25 @@ function createMockContext(identifier: string, currentLabels: string[] = []) {
   };
 }
 
-describe("handleCheckRunRequestedAction — marqueur IA", () => {
+describe("handleCheckRunRequestedAction — labels préfixés par l'icône IA", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("ajoute le marqueur IA quand Auto-apply all applique des labels", async () => {
+  it("Auto-apply all applique les labels sous leur forme préfixée 🤖", async () => {
     const ctx = createMockContext(ACTION_APPLY_ALL, []);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await handleCheckRunRequestedAction(ctx as any);
 
     expect(ctx.octokit.issues.addLabels).toHaveBeenCalledWith(
-      expect.objectContaining({ labels: ["feature", "bug"] }),
-    );
-    expect(ctx.octokit.issues.addLabels).toHaveBeenCalledWith(
-      expect.objectContaining({ labels: [AI_LABEL_MARKER_NAME] }),
+      expect.objectContaining({
+        labels: [toAiLabelName("feature"), toAiLabelName("bug")],
+      }),
     );
   });
 
-  it("ajoute le marqueur IA et retire les labels sous le seuil en mode Auto-apply high", async () => {
+  it("Auto-apply high applique le label >= seuil et retire l'ancien label sous le seuil", async () => {
     const ctx = createMockContext(ACTION_APPLY_HIGH, ["bug"]);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -105,34 +110,40 @@ describe("handleCheckRunRequestedAction — marqueur IA", () => {
       expect.objectContaining({ name: "bug" }),
     );
     expect(ctx.octokit.issues.addLabels).toHaveBeenCalledWith(
-      expect.objectContaining({ labels: ["feature"] }),
-    );
-    expect(ctx.octokit.issues.addLabels).toHaveBeenCalledWith(
-      expect.objectContaining({ labels: [AI_LABEL_MARKER_NAME] }),
+      expect.objectContaining({ labels: [toAiLabelName("feature")] }),
     );
   });
 
-  it("retire le marqueur IA si Auto-apply high ne conserve plus aucun label suggéré", async () => {
-    const ctx = createMockContext(ACTION_APPLY_HIGH, ["bug", AI_LABEL_MARKER_NAME]);
-    ctx.octokit.issues.listLabelsForRepo = vi
-      .fn()
-      .mockResolvedValue({ data: [{ name: "bug" }] });
-
-    // Seule "bug" (sous le seuil) est suggérée et présente : rien ne reste après retrait.
-    const soloAnalysis = {
-      suggestions: [{ name: "bug", confidence: 0.5, reason: "faible confiance" }],
-      summary: "",
-    };
-    const commentBody = `${BOT_COMMENT_MARKER}\n${renderAnalysisDataBlock(soloAnalysis)}`;
-    ctx.octokit.issues.listComments = vi
-      .fn()
-      .mockResolvedValue({ data: [{ id: 1, body: commentBody }] });
+  it("Suggest only précoche les cases dont la variante 🤖 est déjà sur la PR", async () => {
+    const ctx = createMockContext(ACTION_SUGGEST, [toAiLabelName("bug")]);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await handleCheckRunRequestedAction(ctx as any);
 
-    expect(ctx.octokit.issues.removeLabel).toHaveBeenCalledWith(
-      expect.objectContaining({ name: AI_LABEL_MARKER_NAME }),
+    expect(ctx.octokit.issues.updateComment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.stringContaining(`- [x] \`${toAiLabelName("bug")}\``),
+      }),
+    );
+    expect(ctx.octokit.issues.updateComment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.stringContaining(`- [ ] \`${toAiLabelName("feature")}\``),
+      }),
+    );
+    expect(ctx.octokit.issues.addLabels).not.toHaveBeenCalled();
+  });
+
+  it("ne touche jamais un label identique posé manuellement (sans le préfixe 🤖)", async () => {
+    // "bug" est présent sans préfixe : ce n'est pas le fait de notre bot.
+    const ctx = createMockContext(ACTION_SUGGEST, ["bug"]);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await handleCheckRunRequestedAction(ctx as any);
+
+    expect(ctx.octokit.issues.updateComment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.stringContaining(`- [ ] \`${toAiLabelName("bug")}\``),
+      }),
     );
   });
 });

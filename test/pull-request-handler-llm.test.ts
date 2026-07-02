@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { handlePullRequestEvent } from "../src/handlers/pull-request-handler.js";
 import type { LlmProvider } from "../src/llm/llm-provider.js";
-import { AI_LABEL_MARKER_NAME } from "../src/utils/constants.js";
+import { toAiLabelName } from "../src/labels/ai-label-name.js";
 
 function createMockContext() {
   return {
@@ -46,6 +46,7 @@ function createMockContext() {
         addLabels: vi.fn().mockResolvedValue({}),
         removeLabel: vi.fn().mockResolvedValue({}),
         createLabel: vi.fn().mockResolvedValue({}),
+        getLabel: vi.fn().mockResolvedValue({ data: { color: "d73a4a" } }),
       },
       checks: {
         create: vi.fn().mockResolvedValue({}),
@@ -107,14 +108,11 @@ describe("handlePullRequestEvent — chemin LLM", () => {
       expect.objectContaining({ name: "bug" }),
     );
     expect(ctx.octokit.issues.addLabels).toHaveBeenCalledWith(
-      expect.objectContaining({ labels: ["feature"] }),
-    );
-    expect(ctx.octokit.issues.addLabels).toHaveBeenCalledWith(
-      expect.objectContaining({ labels: [AI_LABEL_MARKER_NAME] }),
+      expect.objectContaining({ labels: [toAiLabelName("feature")] }),
     );
   });
 
-  it("mode auto-all : applique tous les labels retenus", async () => {
+  it("mode auto-all : applique tous les labels retenus, préfixés par l'icône IA", async () => {
     process.env.LABEL_MODE = "auto-all";
     const ctx = createMockContext();
 
@@ -122,14 +120,13 @@ describe("handlePullRequestEvent — chemin LLM", () => {
     await handlePullRequestEvent(ctx as any, mockProvider());
 
     expect(ctx.octokit.issues.addLabels).toHaveBeenCalledWith(
-      expect.objectContaining({ labels: ["feature", "bug"] }),
-    );
-    expect(ctx.octokit.issues.addLabels).toHaveBeenCalledWith(
-      expect.objectContaining({ labels: [AI_LABEL_MARKER_NAME] }),
+      expect.objectContaining({
+        labels: [toAiLabelName("feature"), toAiLabelName("bug")],
+      }),
     );
   });
 
-  it("mode suggest : n'ajoute pas le marqueur IA (aucun label appliqué)", async () => {
+  it("mode suggest : ne crée ni n'applique aucun label", async () => {
     process.env.LABEL_MODE = "suggest";
     const ctx = createMockContext();
 

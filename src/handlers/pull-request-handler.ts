@@ -7,8 +7,8 @@ import type { LlmProvider } from "../llm/llm-provider.js";
 import { buildPullRequestLlmContext } from "../llm/pr-context.js";
 import { filterValidSuggestions } from "../labels/label-policy.js";
 import { resolveLabelMode, selectLabelsToApply, selectSuggestedLabelsBelowThreshold } from "../labels/label-mode.js";
-import { applyLabelsToPullRequest, removeLabels } from "../labels/label-applier.js";
-import { syncAiMarkerLabel } from "../labels/ai-marker.js";
+import { removeLabels } from "../labels/label-applier.js";
+import { applyAiSuggestedLabels } from "../labels/ai-label-applier.js";
 import { createLabelerCheckRun } from "../github/check-run.js";
 import { MAX_LABELS_TO_APPLY } from "../utils/constants.js";
 import type { PullRequestAnalysis } from "../domain/llm-analysis.js";
@@ -114,19 +114,15 @@ export async function handlePullRequestEvent(
             );
           }
           if (labelNames.length > 0) {
-            await applyLabelsToPullRequest(context, prData.number, labelNames);
+            await applyAiSuggestedLabels(
+              context.octokit,
+              repository.owner.login,
+              repository.name,
+              prData.number,
+              labelNames,
+            );
           }
           appliedLabels = labelNames;
-          await syncAiMarkerLabel(
-            context.octokit,
-            repository.owner.login,
-            repository.name,
-            prData.number,
-            analysis.suggestions.map((s) => s.name),
-            prData.pullRequestLabels,
-            labelNames,
-            toRemove,
-          );
           context.log.info(
             { ...logContext, mode, appliedLabels, removedLabels: toRemove },
             "Labels applied to pull request",

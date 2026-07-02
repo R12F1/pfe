@@ -1,0 +1,3 @@
+feat: coller l'icone IA directement sur chaque label suggere
+
+Remplace le label marqueur global par une variante prefixee par label : un label suggere par le LLM et applique (auto-high, auto-all, ou case cochee) est cree/applique sous la forme '🤖 <nom>' au lieu du nom brut, en reprenant si possible la couleur du label d'origine. Un label identique ajoute manuellement par un humain (sans le prefixe) reste totalement independant et n'affiche jamais l'icone. Les variantes prefixees sont exclues de la taxonomie proposee au LLM pour eviter les suggestions parasites.
