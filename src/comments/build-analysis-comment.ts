@@ -4,6 +4,7 @@ import type {
 } from "../domain/pull-request-data.js";
 import type { PullRequestAnalysis } from "../domain/llm-analysis.js";
 import {
+  AI_LABEL_MARKER_NAME,
   BOT_COMMENT_MARKER,
   MAX_FILES_IN_COMMENT,
 } from "../utils/constants.js";
@@ -87,6 +88,7 @@ function buildLabelsSection(
     return `###  Labels suggérés — coche ceux à appliquer
 
 > Coche/décoche une case pour appliquer ou retirer le label correspondant sur cette PR.
+> Tant qu'au moins une case est cochée, le label \`${AI_LABEL_MARKER_NAME}\` est ajouté sur la PR pour indiquer qu'un label a été posé par l'IA. Un label ajouté manuellement par un humain n'affiche jamais ce marqueur.
 
 ${checkboxes}${appliedNote}`;
   }

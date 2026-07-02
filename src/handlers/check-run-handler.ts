@@ -5,6 +5,7 @@ import { buildPullRequestLlmContext } from "../llm/pr-context.js";
 import { buildAnalysisComment } from "../comments/build-analysis-comment.js";
 import { parseAnalysisDataBlock } from "../comments/comment-state.js";
 import { applyLabels, removeLabels } from "../labels/label-applier.js";
+import { syncAiMarkerLabel } from "../labels/ai-marker.js";
 import {
   selectLabelsToApply,
   selectSuggestedLabelsBelowThreshold,
@@ -92,6 +93,16 @@ export async function handleCheckRunRequestedAction(
           appliedLabels,
         );
       }
+      await syncAiMarkerLabel(
+        context.octokit,
+        owner,
+        repo,
+        pr.number,
+        analysis.suggestions.map((s) => s.name),
+        prData.pullRequestLabels,
+        appliedLabels,
+        removedLabels,
+      );
     } else if (identifier === ACTION_APPLY_ALL) {
       const toApply = selectLabelsToApply(analysis.suggestions, "auto-all");
       appliedLabels = toApply.map((s) => s.name);
@@ -104,6 +115,16 @@ export async function handleCheckRunRequestedAction(
           appliedLabels,
         );
       }
+      await syncAiMarkerLabel(
+        context.octokit,
+        owner,
+        repo,
+        pr.number,
+        analysis.suggestions.map((s) => s.name),
+        prData.pullRequestLabels,
+        appliedLabels,
+        removedLabels,
+      );
     } else {
       context.log.warn(logContext, "Unknown check run action identifier");
       return;
