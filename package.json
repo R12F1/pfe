@@ -15,7 +15,7 @@
     "format": "prettier --write \"{src,test}/**/*.ts\""
   },
   "dependencies": {
-    "groq-sdk": "^1.2.1",
+    "groq-sdk": "^1.3.0",
     "probot": "^13.4.5"
   },
   "devDependencies": {
